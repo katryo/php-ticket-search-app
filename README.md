@@ -1,4 +1,4 @@
-appengine-php-guestbook
-================================
+Ticket USC CSCI571
+=================
 
-Guestbook demo for Google App Engine that uses PHP
+HW6
