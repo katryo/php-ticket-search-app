@@ -43,6 +43,40 @@ function do_it($something){
             input.disabled = true;
         }
 
+        function handleClear() {
+            window.document.getElementById('js-input-keyword').value = '';
+            window.document.getElementById('category').value = 'default';
+            window.document.getElementById('js-input-distance').value = '10';
+            window.document.getElementById('js-input-from-here').checked = false;
+            window.document.getElementById('js-input-from-there').checked = false;
+            window.document.getElementById('js-input-location').value = '';
+            window.document.getElementById('js-input-location').required = false;
+            window.document.getElementById('js-input-location').disabled = false;
+        }
+
+        function loadJson(url) {
+            const xmlHttp = new XMLHttpRequest();
+            xmlHttp.open('GET', url, false);
+            xmlHttp.overrideMimeType('application/json');
+            xmlHttp.send();
+            const jsonDoc = xmlHttp.responseText;
+            return jsonDoc;
+        }
+
+        function fetchLocation() {
+            let jsonVal;
+            try {
+                const jsonDoc = loadJson('http://ip-api.com/json');
+                jsonVal = JSON.parse(jsonDoc);
+            } catch(err) {
+                alert('JSON file not found.');
+                return false;
+            }
+            console.log(jsonVal);
+        }
+
+        fetchLocation();
+
     </script>
 </head>
 <body>
@@ -52,7 +86,7 @@ function do_it($something){
     <form action="#" method="get">
         <div>
             <label for="keyword">Keyword</label>
-            <input type="text" name="keyword" required>
+            <input type="text" name="keyword" id="js-input-keyword" required>
         </div>
 
         <div>
@@ -70,18 +104,18 @@ function do_it($something){
 
         <div>
             <label for="distance">Distance(miles)</label>
-            <input type="text" name="distance">
+            <input type="text" name="distance" id="js-input-distance" placeholder="10">
 
             <label for="from">from</label>
-            <input type="radio" name="from" value="here" onclick="handleHere();"> here<br>
-            <input type="radio" name="from" value="there" onclick="handleThere();">
+            <input type="radio" name="from" value="here" id="js-input-from-here" onclick="handleHere();"> here<br>
+            <input type="radio" name="from" value="there" id="js-input-from-there" onclick="handleThere();">
 
             <input type="text" name="location" placeholder="location" id="js-input-location">
         </div>
         
         <div>
             <input type="submit" value="Search" disabled>
-            <button>Clear</button>
+            <button onclick="handleClear(); return false;">Clear</button>
         </div>
 
     </form>
