@@ -13,6 +13,13 @@ function fetch_location($address) {
     return $response;
 }
 
+function fetch_event_detail($event_id) {
+    $consumer_key = getenv('TICKET_CONSUMER_KEY');
+    $url = 'https://app.ticketmaster.com/discovery/v2/events/' . $event_id . '?apikey=' . $consumer_key;
+    $response = file_get_contents($url);
+    return $response;
+}
+
 function search_events($geo_point, $keyword, $segment, $distance) {
     $consumer_key = getenv('TICKET_CONSUMER_KEY');
     $segment_id = '';
@@ -74,15 +81,17 @@ function search_events($geo_point, $keyword, $segment, $distance) {
     <style>
         body {
             margin: auto;
-            width: 800px;
+            width: 1000px;
         }
 
         .event-search {
+            margin: auto;
             margin-top: 40px;
             background: #fafafa;
             border-style: solid;
             border-color: #eee;
             padding: 5px;
+            width: 800px;
         }
 
         .event-search-heading {
@@ -100,6 +109,15 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         .icon {
             width: 100px;
+        }
+
+        .no-records {
+            background: #fafafa;
+            text-align: center;
+        }
+
+        .search-results {
+            margin-top: 40px;
         }
         
         label {
@@ -137,8 +155,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             xmlHttp.open('GET', url, false);
             xmlHttp.overrideMimeType('application/json');
             xmlHttp.send();
-            const jsonDoc = xmlHttp.responseText;
-            return jsonDoc;
+            return xmlHttp.responseText;
         }
 
         function fetchLocation() {
@@ -161,39 +178,84 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
 
         function getEventsOnPage() {
-            const eventsStr = document.getElementById('js-events-response').innerText;
+            const responseElement = document.getElementById('js-events-response');
+            if (!responseElement) {
+                return false;
+            }
+            const eventsStr = responseElement.innerText;
             if (eventsStr) {
-                return JSON.parse(eventsStr)._embedded.events;
-            } else {
+                const json = JSON.parse(eventsStr);
+                if (json._embedded) {
+                    return json._embedded.events;
+                }
                 return [];
+            } else {
+                return false;
             }
         }
 
-        function generateTr(event) {
-            const tr = document.createElement('tr');
-
+        function generateTdDate(event) {
             const localDate = event.dates.start.localDate;
             const localTime = event.dates.start.localTime;
             const tdDate = document.createElement('td');
             tdDate.innerText = localDate + ' ' + localTime;
-            tr.appendChild(tdDate);
+            return tdDate;
+        }
 
+        function generateTdIcon(event) {
             const images = event.images;
             const tdImage = document.createElement('td');
             if (images.length > 0) {
                 const iconUrl = event.images[0].url;
                 const image = document.createElement('img');
                 image.src = iconUrl;
-                image.class = 'icon';
+                image.classList.add('icon');
                 tdImage.appendChild(image);
             } else {
                 tdImage.innerText = 'N/A';
             }
-            tr.appendChild(tdImage);
+            return tdImage;
+        }
 
+        function generateTdName(event) {
+            // Event name
             const tdName = document.createElement('td');
-            tdName.innerText = event.name;
-            tr.appendChild(tdName);
+            const eventLink = document.createElement('a');
+            eventLink.href = window.location.href + '&event_id=' + event.id;
+            eventLink.innerText = event.name;
+            tdName.appendChild(eventLink);
+            return tdName;
+        }
+
+        function generateTdGenre(event) {
+            const classifications = event.classifications;
+            let genre = 'N/A';
+            if (classifications.length > 0) {
+                genre = classifications[0].segment.name;
+            }
+            const tdGenre = document.createElement('td');
+            tdGenre.innerText = genre;
+            return tdGenre;
+        }
+
+        function generateTdVenue(event) {
+            let venue = 'N/A';
+            if (event._embedded.venues && event._embedded.venues.length > 0) {
+                venue = event._embedded.venues[0].name;
+            }
+            const tdVenue = document.createElement('td');
+            tdVenue.innerText = venue;
+            return tdVenue;
+        }
+
+        function generateTr(event) {
+            const tr = document.createElement('tr');
+
+            tr.appendChild(generateTdDate(event));
+            tr.appendChild(generateTdIcon(event));
+            tr.appendChild(generateTdName(event));
+            tr.appendChild(generateTdGenre(event));
+            tr.appendChild(generateTdVenue(event));
 
             return tr;
         }
@@ -215,11 +277,42 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             document.getElementById('search-results').appendChild(table);
         }
 
+        function renderNoRecords() {
+            const div = document.createElement('div');
+            div.classList.add('no-records');
+            div.innerText = 'No Records has been found';
+            document.getElementById('search-results').appendChild(div);
+        }
+
+        function getEventDetailOnPage() {
+            const detailElem = document.getElementById('js-event-detail');
+            if (!detailElem) {
+                return false;
+            }
+            const json = detailElem.innerText;
+            return JSON.parse(json);
+        }
+
+        function renderDetailTable($detail) {
+            
+        }
+
         window.onload = function() {
             startLocating();
-            const events = getEventsOnPage();
-            if (events.length > 0) {
-                renderEvents(events);
+
+            const detail = getEventDetailOnPage();
+            if (detail) {
+                console.log(detail);
+            } else {
+                const events = getEventsOnPage();
+                if (events === false) {
+                    return;
+                }
+                if (events.length > 0) {
+                    renderEvents(events);
+                } else {
+                    renderNoRecords();
+                }
             }
         }
 
@@ -266,39 +359,46 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             <button onclick="handleClear(); return false;">Clear</button>
         </div>
 
-        <div id="search-results"></div>
-
     </form>
-
-    <?php
-
-    if ($_GET['keyword']) {
-        $lat = '';
-        $lon = '';
-
-        if ($_GET['from'] == 'there') {
-            $address = $_GET['location'];
-            $response = fetch_location($address);
-            if ($response) {
-            } else {
-                $location = $response['results'][0]['geometry']['location'];
-                $lat = $location['lat'];
-                $lon = $location['lon'];
-            }
-        } else {
-            $lat = $_GET['this-lat'];
-            $lon = $_GET['this-lon'];
-        }
-        $geo_point = encode(floatval($lat), floatval($lon));
-        $search_results = search_events($geo_point, $_GET['keyword'], $_GET['category'], (int)$_GET['distance']);
-        echo '<div id="js-events-response" style="display: none">' . $search_results . '</div>';
-    }
-
-    ?>
-
-    <p><?php echo do_it('abced') ?></p>
-
 </div>
+
+<div id="search-results" class="search-results"></div>
+
+<?php
+
+if (isset($_GET['event_id'])) {
+    $event_detail = fetch_event_detail($_GET['event_id']);
+    echo '<div id="js-event-detail" style="display: none">' . $event_detail . '</div>';
+} else if (isset($_GET['keyword'])) {
+    $lat = '';
+    $lon = '';
+
+    if ($_GET['from'] == 'there') {
+        $address = $_GET['location'];
+        $response = fetch_location($address);
+        if ($response) {
+        } else {
+            $location = $response['results'][0]['geometry']['location'];
+            $lat = $location['lat'];
+            $lon = $location['lon'];
+        }
+    } else {
+        $lat = $_GET['this-lat'];
+        $lon = $_GET['this-lon'];
+    }
+    $geo_point = encode(floatval($lat), floatval($lon));
+    if (isset($_GET['distance'])) {
+        $distance = (int)$_GET['distance'];
+    } else {
+        $distance = 10;
+    }
+    $search_results = search_events($geo_point, $_GET['keyword'], $_GET['category'], $distance);
+    echo '<div id="js-events-response" style="display: none">' . $search_results . '</div>';
+}
+
+?>
+<p><?php echo do_it('abced') ?></p>
+
 </body>
 </html>
 
