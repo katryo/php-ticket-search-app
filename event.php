@@ -27,6 +27,18 @@ function do_it($something){
             text-align: center;
             font-style: italic;
         }
+
+        .location-radio {
+            margin-left: 290px;
+        }
+
+        .buttons {
+            margin-left: 120px;
+        }
+        
+        label {
+            font-weight: bold;
+        }
     </style>
     <script>
         'use strict';
@@ -47,7 +59,7 @@ function do_it($something){
             window.document.getElementById('js-input-keyword').value = '';
             window.document.getElementById('category').value = 'default';
             window.document.getElementById('js-input-distance').value = '10';
-            window.document.getElementById('js-input-from-here').checked = false;
+            window.document.getElementById('js-input-from-here').checked = true;
             window.document.getElementById('js-input-from-there').checked = false;
             window.document.getElementById('js-input-location').value = '';
             window.document.getElementById('js-input-location').required = false;
@@ -69,13 +81,22 @@ function do_it($something){
                 const jsonDoc = loadJson('http://ip-api.com/json');
                 jsonVal = JSON.parse(jsonDoc);
             } catch(err) {
-                alert('JSON file not found.');
-                return false;
+                return [0.0, 0.0];
             }
-            console.log(jsonVal);
+            return [jsonVal.lat, jsonVal.lon];
         }
 
-        fetchLocation();
+        function startLocating() {
+            const loc = fetchLocation();
+            console.log(loc);
+            window.document.getElementById('js-this-lat').value = loc[0];
+            window.document.getElementById('js-this-lon').value = loc[1];
+            window.document.getElementById('js-submit').disabled = false;
+        }
+
+        window.onload = function() {
+            startLocating();
+        }
 
     </script>
 </head>
@@ -107,14 +128,16 @@ function do_it($something){
             <input type="text" name="distance" id="js-input-distance" placeholder="10">
 
             <label for="from">from</label>
-            <input type="radio" name="from" value="here" id="js-input-from-here" onclick="handleHere();"> here<br>
-            <input type="radio" name="from" value="there" id="js-input-from-there" onclick="handleThere();">
+            <input type="radio" name="from" value="here" id="js-input-from-here" onclick="handleHere();" checked> here<br>
+            <input type="radio" name="from" value="there" class="location-radio" id="js-input-from-there" onclick="handleThere();">
 
             <input type="text" name="location" placeholder="location" id="js-input-location">
+            <input type="hidden" name="this-lon" id="js-this-lon">
+            <input type="hidden" name="this-lat" id="js-this-lat">
         </div>
         
-        <div>
-            <input type="submit" value="Search" disabled>
+        <div class="buttons">
+            <input type="submit" value="Search" id="js-submit" disabled>
             <button onclick="handleClear(); return false;">Clear</button>
         </div>
 
