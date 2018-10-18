@@ -615,6 +615,27 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 appendThTdElemInTr('Map', mapOuterDiv, table);
             }
 
+            if (detail.address && detail.address.line1) {
+                appendThTdInTr('Address', detail.address.line1, table);
+            }
+
+            if (detail.city && detail.city.name && detail.state && detail.state.stateCode) {
+                const city = [detail.city.name, detail.state.stateCode].join(', ');
+                appendThTdInTr('City', city, table);
+            }
+
+            if (detail.postalCode) {
+                appendThTdInTr('Postal Code', detail.postalCode, table);
+            }
+
+            if (detail.name && detail.url) {
+                const upcomingLink = document.createElement('a');
+                upcomingLink.href = detail.url;
+                upcomingLink.target = '_blank';
+                upcomingLink.innerText = detail.name + ' Tickets';
+                appendThTdElemInTr('Upcoming Events', upcomingLink, table);
+            }
+
             table.classList.add('map-table');
             document.getElementById('js-venue-detail-show').appendChild(table);
         }
