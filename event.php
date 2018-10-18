@@ -126,6 +126,11 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             text-align: center;
         }
 
+        .no-venue-info {
+            background: #fafafa;
+            text-align: center;
+        }
+
         .search-results {
             margin-top: 40px;
         }
@@ -150,6 +155,27 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             border: solid;
         }
 
+        .map-outer-div {
+            width: 500px;
+        }
+
+        .map-in-table {
+            width: 350px;
+            height: 250px;
+        }
+
+        .travel-button {
+            border: none;
+            display: block;
+            background: #eee;
+        }
+
+        .travel-buttons {
+            margin: 10px;
+            background: #eee;
+            float: left;
+        }
+
         label {
             font-weight: bold;
         }
@@ -158,6 +184,17 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             text-align: left;
         }
     </style>
+<!--    <script async defer-->
+<!--            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAgWZKXXC-bxvLLXmHxd3gM2Jw-_MLHSvE&callback=initMap">-->
+<!--    </script>AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk-->
+<!--        <script async defer-->
+<!--                src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk&callback=initMap">-->
+<!--        </script>-->
+    <script async defer
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk">
+    </script>
+
+
     <script>
         'use strict';
 
@@ -205,7 +242,6 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         function startLocating() {
             const loc = fetchLocation();
-            console.log(loc);
             window.document.getElementById('js-this-lat').value = loc[0];
             window.document.getElementById('js-this-lon').value = loc[1];
             window.document.getElementById('js-submit').disabled = false;
@@ -501,14 +537,93 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             table.appendChild(tr);
         }
 
+        function appendThTdElemInTr(thText, tdElem, table) {
+            const th = document.createElement('th');
+            th.innerText = thText;
+
+            const td = document.createElement('td');
+            td.appendChild(tdElem);
+
+            const tr = document.createElement('tr');
+            tr.appendChild(th);
+            tr.appendChild(td);
+            table.appendChild(tr);
+        }
+
+
+        function route(service, renderer, travelMode, origin, destination) {
+            const request = {
+                origin: origin,
+                destination: destination,
+                travelMode: travelMode
+            };
+            service.route(request, function (result, status) {
+               if (status === 'OK') {
+                   renderer.setDirections(result);
+               }
+            });
+        }
+
+        function appendTravelButton(wrapper, elem, label, travel, here, there) {
+            const button = document.createElement('button');
+            button.innerText = label;
+            button.classList.add('travel-button');
+            button.onclick = function() {
+                route(elem.service, elem.renderer, travel, here, there);
+            };
+            wrapper.appendChild(button);
+        }
+
         function renderVenueDetail(detail) {
             console.log(detail);
             const table = document.createElement('table');
             if (detail.name) {
                 appendThTdInTr('Name', detail.name, table);
             }
+
+            if (detail.location && detail.location.longitude && detail.location.latitude) {
+                const mapDiv = document.createElement('div');
+                mapDiv.classList.add('map-in-table');
+                const loc = {lat: parseFloat(detail.location.latitude), lng: parseFloat(detail.location.longitude)};
+                const map = new google.maps.Map(mapDiv, {
+                    zoom: 10,
+                    center: loc
+                });
+
+                const mapOuterDiv = document.createElement('div');
+                mapOuterDiv.map = map;
+                mapOuterDiv.service = new google.maps.DirectionsService;
+                mapOuterDiv.renderer = new google.maps.DirectionsRenderer({
+                    draggable: false,
+                    map: map,
+                });
+                mapOuterDiv.classList.add('map-outer-div');
+
+
+                const location = fetchLocation();
+                const here = new google.maps.LatLng(parseFloat(location[0]), parseFloat(location[1]));
+
+                const buttonsDiv = document.createElement('div');
+                buttonsDiv.classList.add('travel-buttons');
+                appendTravelButton(buttonsDiv, mapOuterDiv, 'Walk there', 'WALKING', here, loc);
+                appendTravelButton(buttonsDiv, mapOuterDiv, 'Bike there', 'BICYCLING', here, loc);
+                appendTravelButton(buttonsDiv, mapOuterDiv, 'Drive there', 'DRIVING', here, loc);
+                mapOuterDiv.appendChild(buttonsDiv);
+
+                mapOuterDiv.appendChild(mapDiv);
+
+                appendThTdElemInTr('Map', mapOuterDiv, table);
+            }
+
             table.classList.add('map-table');
             document.getElementById('js-venue-detail-show').appendChild(table);
+        }
+
+        function renderNoVenueInfo() {
+            const div = document.createElement('div');
+            div.innerText = 'No Venue Info Found';
+            div.classList.add('no-venue-info');
+            document.getElementById('js-venue-detail-show').appendChild(div);
         }
 
         window.onload = function() {
@@ -525,6 +640,8 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                     && venueDetail._embedded.venues
                     && venueDetail._embedded.venues.length > 0) {
                     renderVenueDetail(venueDetail._embedded.venues[0]);
+                } else {
+                    renderNoVenueInfo();
                 }
             } else {
                 const events = getEventsOnPage();
