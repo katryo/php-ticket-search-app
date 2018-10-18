@@ -20,6 +20,16 @@ function fetch_event_detail($event_id) {
     return $response;
 }
 
+function fetch_venue_detail($keyword) {
+    $consumer_key = getenv('TICKET_CONSUMER_KEY');
+    $url = 'https://app.ticketmaster.com/discovery/v2/venues?apikey='
+        . $consumer_key
+        . '&keyword='
+        . urlencode($keyword);
+    $response = file_get_contents($url);
+    return $response;
+}
+
 function search_events($geo_point, $keyword, $segment, $distance) {
     $consumer_key = getenv('TICKET_CONSUMER_KEY');
     $segment_id = '';
@@ -129,7 +139,17 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             margin: auto;
             width: 80%;
         }
-        
+
+        .venue-detail {
+            margin: auto;
+            margin-top: 20px;
+            width: 80%;
+        }
+
+        .map-table {
+            border: solid;
+        }
+
         label {
             font-weight: bold;
         }
@@ -333,9 +353,19 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             appendTrWrappedElem(thArtist, table);
         }
 
-        function renderDetailTable(detail) {
-            console.log(detail);
+        function appendTdTextToTable(text, table) {
+            const td = document.createElement('td');
+            td.innerText = text;
+            appendTrWrappedElem(td, table);
+        }
 
+        function appendTdToTable(elem, table) {
+            const td = document.createElement('td');
+            td.appendChild(elem);
+            appendTrWrappedElem(td, table);
+        }
+
+        function renderDetailTable(detail) {
             const table = document.createElement('table');
 
             const tdDate = generateTdDate(detail);
@@ -350,11 +380,22 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 appendThToTable('Artist / Team', table);
 
                 const tdArtist = document.createElement('td');
-                let names = [];
+                let artistLinks = [];
                 for (let attraction of detail._embedded.attractions) {
-                    names.push(attraction.name);
+                    const link = document.createElement('a');
+                    link.innerText = attraction.name;
+                    link.href = attraction.url;
+                    link.target = '_blank';
+                    artistLinks.push(link);
                 }
-                tdArtist.innerText = names.join('|');
+                for (let i = 0; i < artistLinks.length; i++) {
+                    tdArtist.appendChild(artistLinks[i]);
+                    if (i < artistLinks.length-1) {
+                        let span = document.createElement('span');
+                        span.innerText = ' / ';
+                        tdArtist.appendChild(span);
+                    }
+                }
                 appendTrWrappedElem(tdArtist, table);
             }
 
@@ -416,7 +457,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 const tdUrl = document.createElement('td');
                 const linkToUrl = document.createElement('a');
                 linkToUrl.href = url;
-                linkToUrl.innerText = url;
+                linkToUrl.innerText = 'Ticketmaster';
                 linkToUrl.target = '_blank';
                 tdUrl.appendChild(linkToUrl);
                 appendTrWrappedElem(tdUrl, table);
@@ -439,6 +480,37 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             document.getElementById('js-event-detail-show').appendChild(h2);
         }
 
+        function getVenueDetailOnPage() {
+            const elem = document.getElementById('js-venue-detail');
+            if (elem) {
+                return JSON.parse(elem.innerText);
+            }
+            return false;
+        }
+
+        function appendThTdInTr(thText, tdText, table) {
+            const th = document.createElement('th');
+            th.innerText = thText;
+
+            const td = document.createElement('td');
+            td.innerText = tdText;
+
+            const tr = document.createElement('tr');
+            tr.appendChild(th);
+            tr.appendChild(td);
+            table.appendChild(tr);
+        }
+
+        function renderVenueDetail(detail) {
+            console.log(detail);
+            const table = document.createElement('table');
+            if (detail.name) {
+                appendThTdInTr('Name', detail.name, table);
+            }
+            table.classList.add('map-table');
+            document.getElementById('js-venue-detail-show').appendChild(table);
+        }
+
         window.onload = function() {
             startLocating();
 
@@ -446,6 +518,14 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             if (detail) {
                 renderEventName(detail.name);
                 renderDetailTable(detail);
+
+                const venueDetail = getVenueDetailOnPage();
+                if (venueDetail
+                    && venueDetail._embedded
+                    && venueDetail._embedded.venues
+                    && venueDetail._embedded.venues.length > 0) {
+                    renderVenueDetail(venueDetail._embedded.venues[0]);
+                }
             } else {
                 const events = getEventsOnPage();
                 if (events === false) {
@@ -507,11 +587,20 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
 <div id="search-results" class="search-results"></div>
 <div id="js-event-detail-show" class="event-detail"></div>
+<div id="js-venue-detail-show" class="venue-detail"></div>
 
 <?php
 
 if (isset($_GET['event_id'])) {
     $event_detail = fetch_event_detail($_GET['event_id']);
+    $obj = json_decode($event_detail, true);
+    $venues = $obj['_embedded']['venues'];
+    if (count($venues) > 0) {
+        $name = $venues[0]['name'];
+        sleep(2); // To avoid API limit
+        $venue_detail = fetch_venue_detail($name);
+        echo '<div id="js-venue-detail" style="display: none">' . $venue_detail . '</div>';
+    }
     echo '<div id="js-event-detail" style="display: none">' . $event_detail . '</div>';
 } else if (isset($_GET['keyword'])) {
     $lat = '';
