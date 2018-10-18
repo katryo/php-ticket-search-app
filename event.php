@@ -30,6 +30,20 @@ function fetch_venue_detail($keyword) {
     return $response;
 }
 
+function if_value_echo($val) {
+    if (isset($val)) {
+        echo ' value="' . $val . '"';
+    }
+}
+
+function if_category_echo_selected($candidate) {
+    if (isset($_GET['category'])) {
+        if ($_GET['category'] == $candidate) {
+            echo 'selected';
+        }
+    }
+}
+
 function search_events($geo_point, $keyword, $segment, $distance) {
     $consumer_key = getenv('TICKET_CONSUMER_KEY');
     $segment_id = '';
@@ -258,12 +272,15 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         function handleClear() {
             window.document.getElementById('js-input-keyword').value = '';
             window.document.getElementById('category').value = 'default';
-            window.document.getElementById('js-input-distance').value = '10';
+            window.document.getElementById('js-input-distance').value = '';
             window.document.getElementById('js-input-from-here').checked = true;
-            window.document.getElementById('js-input-from-there').checked = false;
-            window.document.getElementById('js-input-location').value = '';
-            window.document.getElementById('js-input-location').required = false;
-            window.document.getElementById('js-input-location').disabled = false;
+            document.getElementById('js-input-from-there').checked = false;
+            document.getElementById('js-input-location').value = '';
+            document.getElementById('js-input-location').required = false;
+            document.getElementById('js-input-location').disabled = true;
+            document.getElementById('search-results').innerHTML = '';
+            document.getElementById('js-event-detail-show').innerHTML = '';
+            document.getElementById('js-venue-detail-show').innerHTML = '';
         }
 
         function loadJson(url) {
@@ -808,31 +825,49 @@ function search_events($geo_point, $keyword, $segment, $distance) {
     <form action="" method="get">
         <div>
             <label for="keyword">Keyword</label>
-            <input type="text" name="keyword" id="js-input-keyword" required>
+            <input type="text" name="keyword" id="js-input-keyword" <?php if_value_echo($_GET['keyword']); ?>  required>
         </div>
 
         <div>
             <label for="category">Category</label>
             <select name="category" id="category">
-                <option value="default">Default</option>
-                <option value="music">Music</option>
-                <option value="sports">Sports</option>
-                <option value="arts">Arts</option>
-                <option value="theatre">Theatre</option>
-                <option value="film">Film</option>
-                <option value="miscellaneous">Miscellaneous</option>
+                <option value="default" <?php if_category_echo_selected('default') ?> >Default</option>
+                <option value="music" <?php if_category_echo_selected('music') ?>>Music</option>
+                <option value="sports" <?php if_category_echo_selected('sports') ?>>Sports</option>
+                <option value="arts" <?php if_category_echo_selected('arts') ?>>Arts & Theatre</option>
+                <option value="film" <?php if_category_echo_selected('film') ?>>Film</option>
+                <option value="miscellaneous" <?php if_category_echo_selected('miscellaneous') ?>>Miscellaneous</option>
             </select>
         </div>
 
         <div>
             <label for="distance">Distance(miles)</label>
-            <input type="number" name="distance" id="js-input-distance" placeholder="10">
+            <input type="number" name="distance" id="js-input-distance" placeholder="10" <?php if_value_echo($_GET['distance']); ?>>
 
             <label for="from">from</label>
-            <input type="radio" name="from" value="here" id="js-input-from-here" onclick="handleHere();" checked> here<br>
-            <input type="radio" name="from" value="there" class="location-radio" id="js-input-from-there" onclick="handleThere();">
+            <input type="radio" name="from" value="here" id="js-input-from-here" onclick="handleHere();"
+            <?php if (isset($_GET['from']) && ($_GET['from'] == 'there')) {
+            } else {
+                echo 'checked';
+            }
+             ?>
+            > here<br>
+            <input type="radio" name="from" value="there" class="location-radio" id="js-input-from-there" onclick="handleThere();"
+                <?php if (isset($_GET['from']) && ($_GET['from'] == 'there')) {
+                    echo 'checked';
+                }
+                ?>
+            >
 
-            <input type="text" name="location" placeholder="location" id="js-input-location" disabled>
+            <input type="text" name="location" placeholder="location" id="js-input-location"
+                   <?php if_value_echo($_GET['location']); ?>
+
+            <?php if (isset($_GET['from']) && ($_GET['from'] == 'there')) {
+            } else {
+                echo 'disabled';
+            }
+            ?>
+                   disabled>
             <input type="hidden" name="this-lon" id="js-this-lon">
             <input type="hidden" name="this-lat" id="js-this-lat">
         </div>
@@ -890,7 +925,6 @@ if (isset($_GET['event_id'])) {
 }
 
 ?>
-<p><?php echo do_it('abced') ?></p>
 
 </body>
 </html>
