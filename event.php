@@ -94,6 +94,15 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             width: 1000px;
         }
 
+        a {
+            color: black;
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #999;
+        }
+
         .event-search {
             margin: auto;
             margin-top: 40px;
@@ -115,6 +124,33 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         .buttons {
             margin-left: 120px;
+        }
+
+        .venue-button {
+            border: none;
+            hover: #eee;
+            color: black;
+        }
+
+        .venue-map-div {
+            width: 400px;
+            height: 300px;
+        }
+
+        .venue-map-buttons {
+            position: absolute;
+            width: 100px;
+            z-index: 10;
+        }
+
+        .venue-map-button {
+            width: 100px;
+            height: 40px;
+            background: #eee;
+        }
+
+        .venue-map-button:hover {
+            background: #ddd;
         }
 
         .icon {
@@ -176,6 +212,16 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             float: left;
         }
 
+        .venue-button-in-td {
+            font-size: 14px;
+            border: none;
+            color: black
+        }
+
+        .venue-button-in-td:hover {
+            color: #444;
+        }
+
         label {
             font-weight: bold;
         }
@@ -185,14 +231,13 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
     </style>
 <!--    <script async defer-->
-<!--            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAgWZKXXC-bxvLLXmHxd3gM2Jw-_MLHSvE&callback=initMap">-->
-<!--    </script>AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk-->
-<!--        <script async defer-->
-<!--                src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk&callback=initMap">-->
-<!--        </script>-->
+<!--            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk">-->
+<!--    </script>-->
     <script async defer
-            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk">
+            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB-c1cm-GD-42YecmJJ_kzk-7l-X4nFp6A">
     </script>
+
+
 
 
     <script>
@@ -313,13 +358,85 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             return tdGenre;
         }
 
+        function appendTravelButtonOnMap(wrapper, elem, label, travel, here, there) {
+            const button = document.createElement('button');
+            button.innerText = label;
+            button.classList.add('venue-map-button');
+            button.onclick = function() {
+                route(elem.service, elem.renderer, travel, here, there);
+            };
+            wrapper.appendChild(button);
+        }
+
+        function generateVenueMap(td, lat, lng) {
+            const mapDiv = document.createElement('div');
+            mapDiv.classList.add('venue-map-div');
+            const loc = {lat: lat, lng: lng};
+
+            const map = new google.maps.Map(mapDiv, {
+                zoom: 10,
+                center: loc
+            });
+
+            td.map = map;
+            td.service = new google.maps.DirectionsService;
+            td.renderer = new google.maps.DirectionsRenderer({
+                draggable: false,
+                map: map,
+            });
+
+            const location = fetchLocation();
+            const here = new google.maps.LatLng(parseFloat(location[0]), parseFloat(location[1]));
+
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.classList.add('venue-map-buttons');
+            appendTravelButtonOnMap(buttonsDiv, td, 'Walk there', 'WALKING', here, loc);
+            appendTravelButtonOnMap(buttonsDiv, td, 'Bike there', 'BICYCLING', here, loc);
+            appendTravelButtonOnMap(buttonsDiv, td, 'Drive there', 'DRIVING', here, loc);
+
+            const divButtonAndMap = document.createElement('div');
+            divButtonAndMap.appendChild(buttonsDiv);
+            divButtonAndMap.appendChild(mapDiv);
+            td.appendChild(divButtonAndMap);
+        }
+
+        function resetTd(td) {
+            td.removeChild(td.childNodes[1]);
+            td.removeAttribute('id');
+        }
+
+        function toggleMap(td, lng, lat) {
+            const opening = document.getElementById('js-map-open');
+            if (opening) {
+                resetTd(opening);
+            }
+            if (td !== opening) {
+                td.id = 'js-map-open';
+                generateVenueMap(td, lat, lng);
+            }
+        }
+
         function generateTdVenue(event) {
             let venue = 'N/A';
             if (event._embedded.venues && event._embedded.venues.length > 0) {
                 venue = event._embedded.venues[0].name;
             }
+            const venueButton = document.createElement('button');
+            venueButton.innerText = venue;
+            venueButton.classList.add('venue-button-in-td');
+
             const tdVenue = document.createElement('td');
-            tdVenue.innerText = venue;
+
+            if (event._embedded.venues[0].location && event._embedded.venues[0].location.longitude) {
+                venueButton.onclick = function() {
+                    toggleMap(tdVenue,
+                        parseFloat(event._embedded.venues[0].location.longitude),
+                        parseFloat(event._embedded.venues[0].location.latitude)
+                    );
+                };
+            }
+
+            tdVenue.appendChild(venueButton);
             return tdVenue;
         }
 
@@ -345,7 +462,6 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             }
 
             for (let event of events) {
-                console.log(event);
                 const tr = generateTr(event);
                 table.appendChild(tr);
             }
@@ -449,19 +565,19 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 const tdGenre = document.createElement('td');
                 let genres = [];
                 for (let classification of detail.classifications) {
-                    if (classification.subGenre) {
+                    if (classification.subGenre && classification.subGenre.name !== 'Undefined') {
                         genres.push(classification.subGenre.name);
                     }
-                    if (classification.genre) {
+                    if (classification.genre && classification.genre.name !== 'Undefined') {
                         genres.push(classification.genre.name);
                     }
-                    if (classification.segment) {
+                    if (classification.segment && classification.segment.name !== 'Undefined') {
                         genres.push(classification.segment.name);
                     }
-                    if (classification.subtype) {
+                    if (classification.subtype && classification.subtype.name !== 'Undefined') {
                         genres.push(classification.type.name);
                     }
-                    if (classification.type) {
+                    if (classification.type && classification.type.name !== 'Undefined') {
                         genres.push(classification.type.name);
                     }
                 }
@@ -574,6 +690,42 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             wrapper.appendChild(button);
         }
 
+        function processMap(detail, table) {
+            const mapDiv = document.createElement('div');
+            mapDiv.classList.add('map-in-table');
+            const loc = {lat: parseFloat(detail.location.latitude), lng: parseFloat(detail.location.longitude)};
+
+
+            const map = new google.maps.Map(mapDiv, {
+                zoom: 10,
+                center: loc
+            });
+
+            const mapOuterDiv = document.createElement('div');
+            mapOuterDiv.map = map;
+            mapOuterDiv.service = new google.maps.DirectionsService;
+            mapOuterDiv.renderer = new google.maps.DirectionsRenderer({
+                draggable: false,
+                map: map,
+            });
+            mapOuterDiv.classList.add('map-outer-div');
+
+
+            const location = fetchLocation();
+            const here = new google.maps.LatLng(parseFloat(location[0]), parseFloat(location[1]));
+
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.classList.add('travel-buttons');
+            appendTravelButton(buttonsDiv, mapOuterDiv, 'Walk there', 'WALKING', here, loc);
+            appendTravelButton(buttonsDiv, mapOuterDiv, 'Bike there', 'BICYCLING', here, loc);
+            appendTravelButton(buttonsDiv, mapOuterDiv, 'Drive there', 'DRIVING', here, loc);
+            mapOuterDiv.appendChild(buttonsDiv);
+
+            mapOuterDiv.appendChild(mapDiv);
+
+            appendThTdElemInTr('Map', mapOuterDiv, table);
+        }
+
         function renderVenueDetail(detail) {
             console.log(detail);
             const table = document.createElement('table');
@@ -582,37 +734,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             }
 
             if (detail.location && detail.location.longitude && detail.location.latitude) {
-                const mapDiv = document.createElement('div');
-                mapDiv.classList.add('map-in-table');
-                const loc = {lat: parseFloat(detail.location.latitude), lng: parseFloat(detail.location.longitude)};
-                const map = new google.maps.Map(mapDiv, {
-                    zoom: 10,
-                    center: loc
-                });
-
-                const mapOuterDiv = document.createElement('div');
-                mapOuterDiv.map = map;
-                mapOuterDiv.service = new google.maps.DirectionsService;
-                mapOuterDiv.renderer = new google.maps.DirectionsRenderer({
-                    draggable: false,
-                    map: map,
-                });
-                mapOuterDiv.classList.add('map-outer-div');
-
-
-                const location = fetchLocation();
-                const here = new google.maps.LatLng(parseFloat(location[0]), parseFloat(location[1]));
-
-                const buttonsDiv = document.createElement('div');
-                buttonsDiv.classList.add('travel-buttons');
-                appendTravelButton(buttonsDiv, mapOuterDiv, 'Walk there', 'WALKING', here, loc);
-                appendTravelButton(buttonsDiv, mapOuterDiv, 'Bike there', 'BICYCLING', here, loc);
-                appendTravelButton(buttonsDiv, mapOuterDiv, 'Drive there', 'DRIVING', here, loc);
-                mapOuterDiv.appendChild(buttonsDiv);
-
-                mapOuterDiv.appendChild(mapDiv);
-
-                appendThTdElemInTr('Map', mapOuterDiv, table);
+                processMap(detail, table);
             }
 
             if (detail.address && detail.address.line1) {
@@ -704,13 +826,13 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         <div>
             <label for="distance">Distance(miles)</label>
-            <input type="text" name="distance" id="js-input-distance" placeholder="10">
+            <input type="number" name="distance" id="js-input-distance" placeholder="10">
 
             <label for="from">from</label>
             <input type="radio" name="from" value="here" id="js-input-from-here" onclick="handleHere();" checked> here<br>
             <input type="radio" name="from" value="there" class="location-radio" id="js-input-from-there" onclick="handleThere();">
 
-            <input type="text" name="location" placeholder="location" id="js-input-location">
+            <input type="text" name="location" placeholder="location" id="js-input-location" disabled>
             <input type="hidden" name="this-lon" id="js-this-lon">
             <input type="hidden" name="this-lat" id="js-this-lat">
         </div>
