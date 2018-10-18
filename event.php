@@ -119,9 +119,23 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         .search-results {
             margin-top: 40px;
         }
+
+        .seat-img {
+            float: right;
+            width: 300px;
+        }
+
+        .event-detail {
+            margin: auto;
+            width: 80%;
+        }
         
         label {
             font-weight: bold;
+        }
+
+        table {
+            text-align: left;
         }
     </style>
     <script>
@@ -221,7 +235,12 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             // Event name
             const tdName = document.createElement('td');
             const eventLink = document.createElement('a');
-            eventLink.href = window.location.href + '&event_id=' + event.id;
+            let newUrl = new URL(window.location.href);
+            const searchParams = newUrl.searchParams;
+            searchParams.append('event_id', event.id);
+            const ans = '?' + searchParams.toString();
+            eventLink.href = ans;
+            // eventLink.href = window.location.href + '&event_id=' + event.id;
             eventLink.innerText = event.name;
             tdName.appendChild(eventLink);
             return tdName;
@@ -293,8 +312,131 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             return JSON.parse(json);
         }
 
-        function renderDetailTable($detail) {
-            
+        function generateTdArtistTeam(detail) {
+            console.log(detail);
+        }
+
+        function wrapWithTr(elem) {
+            const tr = document.createElement('tr');
+            tr.appendChild(elem);
+            return tr;
+        }
+
+        function appendTrWrappedElem(elem, table) {
+            const tr = wrapWithTr(elem);
+            table.appendChild(tr);
+        }
+
+        function appendThToTable(text, table) {
+            const thArtist = document.createElement('th');
+            thArtist.innerText = text;
+            appendTrWrappedElem(thArtist, table);
+        }
+
+        function renderDetailTable(detail) {
+            console.log(detail);
+
+            const table = document.createElement('table');
+
+            const tdDate = generateTdDate(detail);
+
+            const thDate = document.createElement('th');
+            thDate.innerText = 'Date';
+
+            appendTrWrappedElem(thDate, table);
+            appendTrWrappedElem(tdDate, table);
+
+            if (detail._embedded.attractions && detail._embedded.attractions.length > 0) {
+                appendThToTable('Artist / Team', table);
+
+                const tdArtist = document.createElement('td');
+                let names = [];
+                for (let attraction of detail._embedded.attractions) {
+                    names.push(attraction.name);
+                }
+                tdArtist.innerText = names.join('|');
+                appendTrWrappedElem(tdArtist, table);
+            }
+
+            if (detail._embedded.venues && detail._embedded.venues.length > 0) {
+                appendThToTable('Venue', table);
+
+                const tdArtist = document.createElement('td');
+                tdArtist.innerText = detail._embedded.venues[0].name;
+                appendTrWrappedElem(tdArtist, table);
+            }
+
+            if (detail.classifications && detail.classifications.length > 0) {
+                appendThToTable('Genre', table);
+
+                const tdGenre = document.createElement('td');
+                let genres = [];
+                for (let classification of detail.classifications) {
+                    if (classification.subGenre) {
+                        genres.push(classification.subGenre.name);
+                    }
+                    if (classification.genre) {
+                        genres.push(classification.genre.name);
+                    }
+                    if (classification.segment) {
+                        genres.push(classification.segment.name);
+                    }
+                    if (classification.subtype) {
+                        genres.push(classification.type.name);
+                    }
+                    if (classification.type) {
+                        genres.push(classification.type.name);
+                    }
+                }
+                tdGenre.innerText = genres.join(' | ');
+                appendTrWrappedElem(tdGenre, table);
+            }
+
+            if (detail.priceRanges && detail.priceRanges.length > 0) {
+                appendThToTable('Price Ranges', table);
+                const priceRange = detail.priceRanges[0];
+                const priceRangeText = priceRange.min + ' - ' + priceRange.max + ' ' + priceRange.currency;
+                const tdPriceRange = document.createElement('td');
+                tdPriceRange.innerText = priceRangeText;
+                appendTrWrappedElem(tdPriceRange, table);
+            }
+
+
+            if (detail.dates && detail.dates.status) {
+                appendThToTable('Ticket Status', table);
+                const status = detail.dates.status.code;
+                const tdStatus = document.createElement('td');
+                tdStatus.innerText = status;
+                appendTrWrappedElem(tdStatus, table);
+            }
+
+            if (detail.url) {
+                appendThToTable('Buy Ticket At', table);
+                const url = detail.url;
+                const tdUrl = document.createElement('td');
+                const linkToUrl = document.createElement('a');
+                linkToUrl.href = url;
+                linkToUrl.innerText = url;
+                linkToUrl.target = '_blank';
+                tdUrl.appendChild(linkToUrl);
+                appendTrWrappedElem(tdUrl, table);
+            }
+
+            if (detail.seatmap) {
+                const seatImg = document.createElement('img');
+                seatImg.src = detail.seatmap.staticUrl;
+                seatImg.classList.add('seat-img');
+                document.getElementById('js-event-detail-show').appendChild(seatImg);
+            }
+
+            document.getElementById('js-event-detail-show').appendChild(table);
+            // const tdVenue = generateTdVenue(detail);
+        }
+
+        function renderEventName(name) {
+            const h2 = document.createElement('h2');
+            h2.innerText = name;
+            document.getElementById('js-event-detail-show').appendChild(h2);
         }
 
         window.onload = function() {
@@ -302,7 +444,8 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
             const detail = getEventDetailOnPage();
             if (detail) {
-                console.log(detail);
+                renderEventName(detail.name);
+                renderDetailTable(detail);
             } else {
                 const events = getEventsOnPage();
                 if (events === false) {
@@ -322,7 +465,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 <div class="event-search">
     <h1 class="event-search-heading">Events Search</h1>
     <hr>
-    <form action="#" method="get">
+    <form action="" method="get">
         <div>
             <label for="keyword">Keyword</label>
             <input type="text" name="keyword" id="js-input-keyword" required>
@@ -363,6 +506,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 </div>
 
 <div id="search-results" class="search-results"></div>
+<div id="js-event-detail-show" class="event-detail"></div>
 
 <?php
 
