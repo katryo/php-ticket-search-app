@@ -784,12 +784,25 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
             // const openings = document.getElementsByClassName('venue-info-opener');
 
+            if (textClicked === venueInfoClickedText) {
+                const photos = document.getElementById('js-venue-photos');
+                if (photos && photos.childNodes.length === 2) {
+                    hideDetail(photos.childNodes[0], photos.childNodes[1], document.getElementById('js-venue-photos-table'), venuePhotosInitialText);
+                }
+            } else {
+                const infos = document.getElementById('js-venue-info');
+                if (infos && infos.childNodes.length === 2) {
+                    hideDetail(infos.childNodes[0], infos.childNodes[1], document.getElementById('js-venue-info-table'), venueInfoInitialText);
+                }
+            }
+
             table.classList.remove('hidden');
             venueTextDiv.innerText = textClicked;
             arrow.src = 'arrow_up.png';
         }
 
         function hideDetail(venueTextDiv, arrow, table, textInitial) {
+            console.log(table);
             table.classList.add('hidden');
             venueTextDiv.innerText = textInitial;
             arrow.src = 'arrow_down.png';
@@ -846,7 +859,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             return div;
         }
 
-        function wrapWithToggle(tableOrDiv, textInitial, textClicked) {
+        function wrapWithToggle(tableOrDiv, textInitial, textClicked, id) {
             tableOrDiv.classList.add('hidden');
 
             const venueTextDiv = document.createElement('div');
@@ -865,6 +878,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             venueInfoDiv.onclick = function() {
                 toggleVenueDetail(venueTextDiv, arrow, tableOrDiv, textInitial, textClicked, venueInfoDiv);
             };
+            venueInfoDiv.id = id;
             return venueInfoDiv;
         }
 
@@ -893,6 +907,11 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             return table;
         }
 
+        const venueInfoInitialText = 'click to show venue info';
+        const venueInfoClickedText = 'click to hide venue info';
+        const venuePhotosInitialText = 'click to show venue photos';
+        const venuePhotosClickedText = 'click to hide venue photos';
+
         window.onload = function() {
             startLocating();
 
@@ -914,9 +933,11 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                     tableOrDiv = renderNoVenueInfo();
                     photosElem = generateNoPhotos();
                 }
+                tableOrDiv.id = 'js-venue-info-table';
+                photosElem.id = 'js-venue-photos-table';
 
-                const venueInfoDiv = wrapWithToggle(tableOrDiv, 'click to show venue info', 'click to hide venue info');
-                const venuePhotosDiv = wrapWithToggle(photosElem, 'click to show venue photos', 'click to hide venue photos');
+                const venueInfoDiv = wrapWithToggle(tableOrDiv, venueInfoInitialText, venueInfoClickedText, 'js-venue-info');
+                const venuePhotosDiv = wrapWithToggle(photosElem, venuePhotosInitialText, venuePhotosClickedText, 'js-venue-photos');
 
                 document.getElementById('js-venue-detail-show').appendChild(venueInfoDiv);
                 document.getElementById('js-venue-detail-show').appendChild(tableOrDiv);
