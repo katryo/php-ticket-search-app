@@ -2,10 +2,6 @@
 <?php
 include 'geoHash.php';
 
-function do_it($something){
-    return $something . "abc";
-}
-
 function fetch_location($address) {
     $app_key = getenv('G_MAP_API_KEY');
     $url = 'https://maps.googleapis.com/maps/api/geocode/json?address=' . urlencode($address) . '&key=' . $app_key;
@@ -243,6 +239,51 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         table {
             text-align: left;
         }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #search-results table, #search-results td, #search-results tr, #search-results th {
+            border: 1px solid #bbb;
+        }
+
+        .venue-detail table, .venue-detail td, .venue-detail tr, .venue-detail th {
+            border: 1px solid #bbb;
+        }
+
+        .venue-info-opener {
+            width: 200px;
+            margin: auto;
+            text-align: center;
+        }
+
+        .venue-info-text {
+            color: #bbb;
+            text-align: center;
+        }
+
+        .venue-info-arrow {
+            width: 50px;
+        }
+
+        .venue-photo {
+            width: 300px;
+            max-height: 300px;
+        }
+
+        .venue-photos-table {
+            border: 1px solid #bbb;
+            width: 100%;
+            text-align: center;
+            margin: auto;
+        }
+
+
     </style>
 <!--    <script async defer-->
 <!--            src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCI4NLVqVTo5cjbycAY5KomPBd542pHpXk">-->
@@ -501,10 +542,6 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             return JSON.parse(json);
         }
 
-        function generateTdArtistTeam(detail) {
-            console.log(detail);
-        }
-
         function wrapWithTr(elem) {
             const tr = document.createElement('tr');
             tr.appendChild(elem);
@@ -743,6 +780,29 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             appendThTdElemInTr('Map', mapOuterDiv, table);
         }
 
+        function showDetail(venueTextDiv, arrow, table, textClicked, venueInfoDiv) {
+
+            // const openings = document.getElementsByClassName('venue-info-opener');
+
+            table.classList.remove('hidden');
+            venueTextDiv.innerText = textClicked;
+            arrow.src = 'arrow_up.png';
+        }
+
+        function hideDetail(venueTextDiv, arrow, table, textInitial) {
+            table.classList.add('hidden');
+            venueTextDiv.innerText = textInitial;
+            arrow.src = 'arrow_down.png';
+        }
+
+        function toggleVenueDetail(venueTextDiv, arrow, table, textInitial, textClicked, venueInfoDiv) {
+            if (table.classList.contains('hidden')) {
+                showDetail(venueTextDiv, arrow, table, textClicked, venueInfoDiv);
+            } else {
+                hideDetail(venueTextDiv, arrow, table, textInitial);
+            }
+        }
+
         function renderVenueDetail(detail) {
             console.log(detail);
             const table = document.createElement('table');
@@ -776,14 +836,61 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             }
 
             table.classList.add('map-table');
-            document.getElementById('js-venue-detail-show').appendChild(table);
+            return table;
         }
 
         function renderNoVenueInfo() {
             const div = document.createElement('div');
             div.innerText = 'No Venue Info Found';
             div.classList.add('no-venue-info');
-            document.getElementById('js-venue-detail-show').appendChild(div);
+            return div;
+        }
+
+        function wrapWithToggle(tableOrDiv, textInitial, textClicked) {
+            tableOrDiv.classList.add('hidden');
+
+            const venueTextDiv = document.createElement('div');
+            venueTextDiv.classList.add('venue-info-text');
+            venueTextDiv.innerText = textInitial;
+
+            const arrow = document.createElement('img');
+            arrow.src = 'arrow_down.png';
+            arrow.classList.add('venue-info-arrow');
+
+            const venueInfoDiv = document.createElement('div');
+            venueInfoDiv.classList.add('venue-info-opener');
+            venueInfoDiv.appendChild(venueTextDiv);
+            venueInfoDiv.appendChild(arrow);
+
+            venueInfoDiv.onclick = function() {
+                toggleVenueDetail(venueTextDiv, arrow, tableOrDiv, textInitial, textClicked, venueInfoDiv);
+            };
+            return venueInfoDiv;
+        }
+
+        function generateNoPhotos() {
+            const div = document.createElement('div');
+            div.classList.add('no-venue-info');
+            div.innerText = 'No Venue Photos Found';
+            return div
+        }
+
+        function generateVenuePhotosTable(detail) {
+            const images = detail.images;
+            const table = document.createElement('table');
+            table.classList.add('venue-photos-table');
+            if (images && images.length > 0) {
+                for (let image of images) {
+                    let img = document.createElement('img');
+                    img.src = image.url;
+                    img.classList.add('venue-photo');
+                    let tr = wrapWithTr(img);
+                    table.appendChild(tr);
+                }
+            } else {
+                return generateNoPhotos();
+            }
+            return table;
         }
 
         window.onload = function() {
@@ -795,14 +902,28 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 renderDetailTable(detail);
 
                 const venueDetail = getVenueDetailOnPage();
+                let tableOrDiv;
+                let photosElem;
                 if (venueDetail
                     && venueDetail._embedded
                     && venueDetail._embedded.venues
                     && venueDetail._embedded.venues.length > 0) {
-                    renderVenueDetail(venueDetail._embedded.venues[0]);
+                    tableOrDiv = renderVenueDetail(venueDetail._embedded.venues[0]);
+                    photosElem = generateVenuePhotosTable(venueDetail._embedded.venues[0]);
                 } else {
-                    renderNoVenueInfo();
+                    tableOrDiv = renderNoVenueInfo();
+                    photosElem = generateNoPhotos();
                 }
+
+                const venueInfoDiv = wrapWithToggle(tableOrDiv, 'click to show venue info', 'click to hide venue info');
+                const venuePhotosDiv = wrapWithToggle(photosElem, 'click to show venue photos', 'click to hide venue photos');
+
+                document.getElementById('js-venue-detail-show').appendChild(venueInfoDiv);
+                document.getElementById('js-venue-detail-show').appendChild(tableOrDiv);
+
+                document.getElementById('js-venue-detail-show').appendChild(venuePhotosDiv);
+                document.getElementById('js-venue-detail-show').appendChild(photosElem);
+
             } else {
                 const events = getEventsOnPage();
                 if (events === false) {
@@ -867,7 +988,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 echo 'disabled';
             }
             ?>
-                   disabled>
+            >
             <input type="hidden" name="this-lon" id="js-this-lon">
             <input type="hidden" name="this-lat" id="js-this-lat">
         </div>
