@@ -392,7 +392,14 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             const localDate = event.dates.start.localDate;
             const localTime = event.dates.start.localTime;
             const tdDate = document.createElement('td');
-            tdDate.innerText = localDate + ' ' + localTime;
+
+            if (localDate && localTime) {
+                tdDate.innerText = localDate + ' ' + localTime;
+            } else if (localDate) {
+                tdDate.innerText = localDate;
+            } else {
+                tdDate.innerText = 'N/A';
+            }
             return tdDate;
         }
 
