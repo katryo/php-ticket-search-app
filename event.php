@@ -804,18 +804,15 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             wrapper.appendChild(button);
         }
 
-        function processMap(detail, table) {
+        function generateMap(mapOuterDiv, lat, lng) {
             const mapDiv = document.createElement('div');
             mapDiv.classList.add('map-in-table');
-            const loc = {lat: parseFloat(detail.location.latitude), lng: parseFloat(detail.location.longitude)};
 
-
+            const loc = {lat: lat, lng: lng};
             const map = new google.maps.Map(mapDiv, {
                 zoom: 13,
                 center: loc
             });
-
-            const mapOuterDiv = document.createElement('div');
             mapOuterDiv.map = map;
 
             const marker = new google.maps.Marker({
@@ -837,10 +834,25 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             appendTravelButton(buttonsDiv, mapOuterDiv, 'Bike there', 'BICYCLING', here, loc);
             appendTravelButton(buttonsDiv, mapOuterDiv, 'Drive there', 'DRIVING', here, loc);
             mapOuterDiv.appendChild(buttonsDiv);
-
             mapOuterDiv.appendChild(mapDiv);
+            return mapOuterDiv;
+        }
+
+        function processMap(detail, table) {
+            const mapOuterDiv = document.createElement('div');
+            mapOuterDiv.id = 'js-map-outer-div';
+            generateMap(mapOuterDiv, parseFloat(detail.location.latitude), parseFloat(detail.location.longitude));
 
             appendThTdElemInTr('Map', mapOuterDiv, table);
+        }
+
+        function resetMap() {
+            if (document.venueDetail) {
+                const detail = document.venueDetail;
+                const mapOuterDiv = document.getElementById('js-map-outer-div');
+                mapOuterDiv.innerHTML = '';
+                generateMap(mapOuterDiv, parseFloat(detail.location.latitude), parseFloat(detail.location.longitude));
+            }
         }
 
         function showDetail(venueTextDiv, arrow, table, textClicked, venueInfoDiv) {
@@ -863,7 +875,9 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
 
         function hideDetail(venueTextDiv, arrow, table, textInitial) {
-            console.log(table);
+            if (textInitial === venueInfoInitialText) {
+                resetMap();
+            }
             table.classList.add('hidden');
             venueTextDiv.innerText = textInitial;
             arrow.src = 'arrow_down.png';
@@ -879,6 +893,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         function renderVenueDetail(detail) {
             console.log(detail);
+            document.venueDetail = detail;
             const table = document.createElement('table');
             if (detail.name) {
                 appendThTdInTr('Name', detail.name, table);
@@ -985,39 +1000,42 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         const venuePhotosInitialText = 'click to show venue photos';
         const venuePhotosClickedText = 'click to hide venue photos';
 
+        function generateDetail (detail) {
+            renderEventName(detail.name);
+            renderDetailTable(detail);
+
+            const venueDetail = getVenueDetailOnPage();
+            let tableOrDiv;
+            let photosElem;
+            if (venueDetail
+                && venueDetail._embedded
+                && venueDetail._embedded.venues
+                && venueDetail._embedded.venues.length > 0) {
+                tableOrDiv = renderVenueDetail(venueDetail._embedded.venues[0]);
+                photosElem = generateVenuePhotosTable(venueDetail._embedded.venues[0]);
+            } else {
+                tableOrDiv = renderNoVenueInfo();
+                photosElem = generateNoPhotos();
+            }
+            tableOrDiv.id = 'js-venue-info-table';
+            photosElem.id = 'js-venue-photos-table';
+
+            const venueInfoDiv = wrapWithToggle(tableOrDiv, venueInfoInitialText, venueInfoClickedText, 'js-venue-info');
+            const venuePhotosDiv = wrapWithToggle(photosElem, venuePhotosInitialText, venuePhotosClickedText, 'js-venue-photos');
+
+            document.getElementById('js-venue-detail-show').appendChild(venueInfoDiv);
+            document.getElementById('js-venue-detail-show').appendChild(tableOrDiv);
+
+            document.getElementById('js-venue-detail-show').appendChild(venuePhotosDiv);
+            document.getElementById('js-venue-detail-show').appendChild(photosElem);
+        }
+
         window.onload = function() {
             startLocating();
 
             const detail = getEventDetailOnPage();
             if (detail) {
-                renderEventName(detail.name);
-                renderDetailTable(detail);
-
-                const venueDetail = getVenueDetailOnPage();
-                let tableOrDiv;
-                let photosElem;
-                if (venueDetail
-                    && venueDetail._embedded
-                    && venueDetail._embedded.venues
-                    && venueDetail._embedded.venues.length > 0) {
-                    tableOrDiv = renderVenueDetail(venueDetail._embedded.venues[0]);
-                    photosElem = generateVenuePhotosTable(venueDetail._embedded.venues[0]);
-                } else {
-                    tableOrDiv = renderNoVenueInfo();
-                    photosElem = generateNoPhotos();
-                }
-                tableOrDiv.id = 'js-venue-info-table';
-                photosElem.id = 'js-venue-photos-table';
-
-                const venueInfoDiv = wrapWithToggle(tableOrDiv, venueInfoInitialText, venueInfoClickedText, 'js-venue-info');
-                const venuePhotosDiv = wrapWithToggle(photosElem, venuePhotosInitialText, venuePhotosClickedText, 'js-venue-photos');
-
-                document.getElementById('js-venue-detail-show').appendChild(venueInfoDiv);
-                document.getElementById('js-venue-detail-show').appendChild(tableOrDiv);
-
-                document.getElementById('js-venue-detail-show').appendChild(venuePhotosDiv);
-                document.getElementById('js-venue-detail-show').appendChild(photosElem);
-
+                generateDetail(detail);
             } else {
                 const events = getEventsOnPage();
                 if (events === false) {
