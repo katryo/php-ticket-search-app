@@ -506,7 +506,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         function generateTdVenue(event) {
             let venue = 'N/A';
-            if (event._embedded.venues && event._embedded.venues.length > 0) {
+            if (event._embedded.venues && event._embedded.venues.length > 0 && event._embedded.venues[0].name) {
                 venue = event._embedded.venues[0].name;
             }
             const venueButton = document.createElement('button');
