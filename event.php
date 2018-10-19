@@ -334,7 +334,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         function handleClear() {
             window.document.getElementById('js-input-keyword').value = '';
             window.document.getElementById('category').value = 'default';
-            window.document.getElementById('js-input-distance').value = '10';
+            window.document.getElementById('js-input-distance').value = '';
             window.document.getElementById('js-input-from-here').checked = true;
             document.getElementById('js-input-from-there').checked = false;
             document.getElementById('js-input-location').value = '';
@@ -1082,11 +1082,9 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         <div>
             <label for="distance">Distance(miles)</label>
-            <input type="number" name="distance" id="js-input-distance" placeholder="location"
+            <input type="number" name="distance" id="js-input-distance" placeholder="10"
                 <?php if (isset($_GET['distance'])) {
                     echo 'value=' . '"' . $_GET['distance'] . '"';
-                } else {
-                    echo 'value="10"';
                 };
                 ?>
             >
@@ -1118,7 +1116,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             <input type="hidden" name="this-lon" id="js-this-lon">
             <input type="hidden" name="this-lat" id="js-this-lat">
         </div>
-        
+
         <div class="buttons">
             <input type="submit" value="Search" id="js-submit" disabled>
             <button onclick="handleClear(); return false;">Clear</button>
@@ -1161,7 +1159,7 @@ if (isset($_GET['event_id'])) {
 
     $geo_point = encode(floatval($lat), floatval($lon));
 
-    if (isset($_GET['distance'])) {
+    if (isset($_GET['distance']) && $_GET['distance'] != '') {
         $distance = (int)$_GET['distance'];
     } else {
         $distance = 10;
