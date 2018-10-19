@@ -301,8 +301,12 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             min-height: 250px;
         }
 
-        .research-results-table {
+        .search-results-table {
             width: 100%;
+        }
+
+        .search-results-table th {
+            text-align: center;
         }
 
     </style>
@@ -561,7 +565,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         function renderEvents(events) {
             const table = document.createElement('table');
-            table.classList.add('research-results-table');
+            table.classList.add('search-results-table');
 
             for (let headName of ['Date', 'Icon', 'Event', 'Genre', 'Venue']) {
                 const th = document.createElement('th');
