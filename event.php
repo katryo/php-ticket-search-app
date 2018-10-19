@@ -88,7 +88,6 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             . '&unit=miles&geoPoint='
             . $geo_point;
     }
-    echo $url;
     $response = file_get_contents($url);
     return $response;
 }
@@ -284,6 +283,14 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             width: 100%;
             text-align: center;
             margin: auto;
+        }
+
+        .detail-table {
+            margin: auto;
+        }
+
+        h2 {
+            text-align: center;
         }
 
 
@@ -592,7 +599,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         function renderDetailTable(detail) {
             const table = document.createElement('table');
-
+            table.classList.add('detail-table');
             const tdDate = generateTdDate(detail);
 
             const thDate = document.createElement('th');
@@ -607,11 +614,17 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 const tdArtist = document.createElement('td');
                 let artistLinks = [];
                 for (let attraction of detail._embedded.attractions) {
-                    const link = document.createElement('a');
-                    link.innerText = attraction.name;
-                    link.href = attraction.url;
-                    link.target = '_blank';
-                    artistLinks.push(link);
+                    if (attraction.name && attraction.url) {
+                        const link = document.createElement('a');
+                        link.innerText = attraction.name;
+                        link.href = attraction.url;
+                        link.target = '_blank';
+                        artistLinks.push(link);
+                    } else if (attraction.name) {
+                        const name = document.createElement('span');
+                        name.innerText = attraction.name;
+                        artistLinks.push(name);
+                    }
                 }
                 for (let i = 0; i < artistLinks.length; i++) {
                     tdArtist.appendChild(artistLinks[i]);
