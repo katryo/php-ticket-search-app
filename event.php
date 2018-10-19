@@ -152,6 +152,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             position: absolute;
             width: 100px;
             z-index: 10;
+            text-align: center;
         }
 
         .venue-map-button {
@@ -179,7 +180,9 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
 
         .search-results {
+            margin: auto;
             margin-top: 40px;
+            width: 100%;
         }
 
         .seat-img {
@@ -193,13 +196,14 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
 
         .venue-detail {
-            margin: auto;
             margin-top: 20px;
+            margin: auto;
             width: 80%;
         }
 
         .map-table {
             border: solid;
+            width: 100%;
         }
 
         .map-outer-div {
@@ -207,8 +211,9 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
 
         .map-in-table {
-            width: 350px;
-            height: 250px;
+            width: 400px;
+            height: 300px;
+            margin: auto;
         }
 
         .travel-button {
@@ -274,8 +279,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
 
         .venue-photo {
-            width: 300px;
-            max-height: 300px;
+            max-width: 80%;
         }
 
         .venue-photos-table {
@@ -297,6 +301,9 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             min-height: 250px;
         }
 
+        .research-results-table {
+            width: 100%;
+        }
 
     </style>
 <!--    <script async defer-->
@@ -463,7 +470,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             const loc = {lat: lat, lng: lng};
 
             const map = new google.maps.Map(mapDiv, {
-                zoom: 10,
+                zoom: 13,
                 center: loc
             });
 
@@ -514,7 +521,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             if (event._embedded.venues && event._embedded.venues.length > 0 && event._embedded.venues[0].name) {
                 venue = event._embedded.venues[0].name;
             }
-            const venueButton = document.createElement('button');
+            const venueButton = document.createElement('div');
             venueButton.innerText = venue;
             venueButton.classList.add('venue-button-in-td');
 
@@ -547,6 +554,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         function renderEvents(events) {
             const table = document.createElement('table');
+            table.classList.add('research-results-table');
 
             for (let headName of ['Date', 'Icon', 'Event', 'Genre', 'Venue']) {
                 const th = document.createElement('th');
@@ -683,7 +691,14 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             if (detail.priceRanges && detail.priceRanges.length > 0) {
                 appendThToTable('Price Ranges', table);
                 const priceRange = detail.priceRanges[0];
-                const priceRangeText = priceRange.min + ' - ' + priceRange.max + ' ' + priceRange.currency;
+                let priceRangeText;
+                if (priceRange.min && priceRange.max) {
+                    priceRangeText = priceRange.min + ' - ' + priceRange.max + ' ' + priceRange.currency;
+                } else if (priceRange.min) {
+                    priceRangeText = priceRange.min + ' ' + priceRange.currency;
+                } else {
+                    priceRangeText = priceRange.max + ' ' + priceRange.currency;
+                }
                 const tdPriceRange = document.createElement('td');
                 tdPriceRange.innerText = priceRangeText;
                 appendTrWrappedElem(tdPriceRange, table);
@@ -796,7 +811,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
 
             const map = new google.maps.Map(mapDiv, {
-                zoom: 10,
+                zoom: 13,
                 center: loc
             });
 
@@ -867,23 +882,33 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             const table = document.createElement('table');
             if (detail.name) {
                 appendThTdInTr('Name', detail.name, table);
+            } else {
+                appendThTdInTr('Name', 'N/A', table);
             }
 
             if (detail.location && detail.location.longitude && detail.location.latitude) {
                 processMap(detail, table);
+            } else {
+                appendThTdInTr('Map', 'N/A', table);
             }
 
             if (detail.address && detail.address.line1) {
                 appendThTdInTr('Address', detail.address.line1, table);
+            } else {
+                appendThTdInTr('Address', 'N/A', table);
             }
 
             if (detail.city && detail.city.name && detail.state && detail.state.stateCode) {
                 const city = [detail.city.name, detail.state.stateCode].join(', ');
                 appendThTdInTr('City', city, table);
+            } else {
+                appendThTdInTr('City', 'N/A', table);
             }
 
             if (detail.postalCode) {
                 appendThTdInTr('Postal Code', detail.postalCode, table);
+            } else {
+                appendThTdInTr('Postal Code', 'N/A', table);
             }
 
             if (detail.name && detail.url) {
@@ -892,6 +917,8 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 upcomingLink.target = '_blank';
                 upcomingLink.innerText = detail.name + ' Tickets';
                 appendThTdElemInTr('Upcoming Events', upcomingLink, table);
+            } else {
+                appendThTdElemInTr('Upcoming Events', 'N/A', table);
             }
 
             table.classList.add('map-table');
