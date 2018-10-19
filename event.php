@@ -88,6 +88,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             . '&unit=miles&geoPoint='
             . $geo_point;
     }
+    echo $url;
     $response = file_get_contents($url);
     return $response;
 }
@@ -140,6 +141,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             border: none;
             hover: #eee;
             color: black;
+            background: white;
         }
 
         .venue-map-div {
@@ -225,11 +227,12 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         .venue-button-in-td {
             font-size: 14px;
             border: none;
-            color: black
+            color: black;
+            background: white;
         }
 
         .venue-button-in-td:hover {
-            color: #444;
+            color: #aaa;
         }
 
         label {
@@ -313,7 +316,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         function handleClear() {
             window.document.getElementById('js-input-keyword').value = '';
             window.document.getElementById('category').value = 'default';
-            window.document.getElementById('js-input-distance').value = '';
+            window.document.getElementById('js-input-distance').value = '10';
             window.document.getElementById('js-input-from-here').checked = true;
             document.getElementById('js-input-from-there').checked = false;
             document.getElementById('js-input-location').value = '';
@@ -426,6 +429,23 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             wrapper.appendChild(button);
         }
 
+
+        function getHere() {
+            let location;
+            const url = new URL(window.location.href);
+            const from = url.searchParams.get('from').toString();
+
+            let here;
+            if (from === 'here') {
+                const location = fetchLocation();
+                here = new google.maps.LatLng(parseFloat(location[0]), parseFloat(location[1]));
+            } else {
+                location = url.searchParams.get('location').toString();
+                here = location;
+            }
+            return here;
+        }
+
         function generateVenueMap(td, lat, lng) {
             const mapDiv = document.createElement('div');
             mapDiv.classList.add('venue-map-div');
@@ -443,8 +463,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 map: map,
             });
 
-            const location = fetchLocation();
-            const here = new google.maps.LatLng(parseFloat(location[0]), parseFloat(location[1]));
+            const here = getHere();
 
             const buttonsDiv = document.createElement('div');
             buttonsDiv.classList.add('venue-map-buttons');
@@ -764,9 +783,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             });
             mapOuterDiv.classList.add('map-outer-div');
 
-
-            const location = fetchLocation();
-            const here = new google.maps.LatLng(parseFloat(location[0]), parseFloat(location[1]));
+            const here = getHere();
 
             const buttonsDiv = document.createElement('div');
             buttonsDiv.classList.add('travel-buttons');
@@ -781,8 +798,6 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         }
 
         function showDetail(venueTextDiv, arrow, table, textClicked, venueInfoDiv) {
-
-            // const openings = document.getElementsByClassName('venue-info-opener');
 
             if (textClicked === venueInfoClickedText) {
                 const photos = document.getElementById('js-venue-photos');
@@ -984,7 +999,14 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         <div>
             <label for="distance">Distance(miles)</label>
-            <input type="number" name="distance" id="js-input-distance" placeholder="10" <?php if_value_echo($_GET['distance']); ?>>
+            <input type="number" name="distance" id="js-input-distance" placeholder="location"
+                <?php if (isset($_GET['distance'])) {
+                    echo 'value=' . '"' . $_GET['distance'] . '"';
+                } else {
+                    echo 'value="10"';
+                };
+                ?>
+            >
 
             <label for="from">from</label>
             <input type="radio" name="from" value="here" id="js-input-from-here" onclick="handleHere();"
@@ -1045,18 +1067,17 @@ if (isset($_GET['event_id'])) {
 
     if ($_GET['from'] == 'there') {
         $address = $_GET['location'];
-        $response = fetch_location($address);
-        if ($response) {
-        } else {
-            $location = $response['results'][0]['geometry']['location'];
-            $lat = $location['lat'];
-            $lon = $location['lon'];
-        }
+        $response = json_decode(fetch_location($address), true);
+        $location = $response['results'][0]['geometry']['location'];
+        $lat = $location['lat'];
+        $lon = $location['lng'];
     } else {
         $lat = $_GET['this-lat'];
         $lon = $_GET['this-lon'];
     }
+
     $geo_point = encode(floatval($lat), floatval($lon));
+
     if (isset($_GET['distance'])) {
         $distance = (int)$_GET['distance'];
     } else {
