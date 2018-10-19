@@ -467,6 +467,11 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 center: loc
             });
 
+            const marker = new google.maps.Marker({
+                position: loc,
+                map: map,
+            });
+
             td.map = map;
             td.service = new google.maps.DirectionsService;
             td.renderer = new google.maps.DirectionsRenderer({
@@ -797,6 +802,11 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
             const mapOuterDiv = document.createElement('div');
             mapOuterDiv.map = map;
+
+            const marker = new google.maps.Marker({
+                position: loc,
+                map: map,
+            });
             mapOuterDiv.service = new google.maps.DirectionsService;
             mapOuterDiv.renderer = new google.maps.DirectionsRenderer({
                 draggable: false,
