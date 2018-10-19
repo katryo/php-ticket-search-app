@@ -184,7 +184,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
 
         .seat-img {
             float: right;
-            width: 300px;
+            height: 250px;
         }
 
         .event-detail {
@@ -293,6 +293,10 @@ function search_events($geo_point, $keyword, $segment, $distance) {
             text-align: center;
         }
 
+        .event-detail-wrapper {
+            min-height: 250px;
+        }
+
 
     </style>
 <!--    <script async defer-->
@@ -388,7 +392,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         function generateTdIcon(event) {
             const images = event.images;
             const tdImage = document.createElement('td');
-            if (images.length > 0) {
+            if (images && images.length > 0) {
                 const iconUrl = event.images[0].url;
                 const image = document.createElement('img');
                 image.src = iconUrl;
@@ -418,7 +422,7 @@ function search_events($geo_point, $keyword, $segment, $distance) {
         function generateTdGenre(event) {
             const classifications = event.classifications;
             let genre = 'N/A';
-            if (classifications.length > 0) {
+            if (classifications && classifications.length > 0) {
                 genre = classifications[0].segment.name;
             }
             const tdGenre = document.createElement('td');
@@ -701,14 +705,18 @@ function search_events($geo_point, $keyword, $segment, $distance) {
                 appendTrWrappedElem(tdUrl, table);
             }
 
+            const wrap = document.createElement('div');
+            wrap.classList.add('event-detail-wrapper');
+            document.getElementById('js-event-detail-show').appendChild(wrap);
+
             if (detail.seatmap) {
                 const seatImg = document.createElement('img');
                 seatImg.src = detail.seatmap.staticUrl;
                 seatImg.classList.add('seat-img');
-                document.getElementById('js-event-detail-show').appendChild(seatImg);
+                wrap.appendChild(seatImg);
             }
 
-            document.getElementById('js-event-detail-show').appendChild(table);
+            wrap.appendChild(table);
             // const tdVenue = generateTdVenue(detail);
         }
 
