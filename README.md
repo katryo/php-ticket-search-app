@@ -3,7 +3,7 @@ PHP web app without front-end frameworks. Homework for a CS course at USC. Our p
 
 ## Requirements
 
-- One PHP file
+- One PHP file (I know this is ugly)
 - Can run on GCP/AWS/Azure
 
 ## Notice for USC students
